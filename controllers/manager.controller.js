@@ -28,7 +28,7 @@ const handleError = (res, error) => {
 exports.getAreas = async (req, res) => {
   try {
     const areas = await Area.find({ 
-      managers: req.user._id,
+      managers: req.user.id,
       isActive: true 
     })
     .select('name description city state postalCodes')
@@ -47,8 +47,9 @@ exports.getAreas = async (req, res) => {
 // Get all customers in manager's areas
 exports.getCustomers = async (req, res) => {
   try {
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
+    console.log('getCustomers: Area IDs:', areaIds);
 
     const customers = await User.find({
       role: 'Customer',
@@ -179,11 +180,16 @@ exports.addDeliverer = async (req, res) => {
 exports.getPublications = async (req, res) => {
   try {
     const publications = await Publication.find({
-      managerId: req.user._id,
+      managerId: req.user.id,
       isActive: true
     })
     .populate('areas', 'name city')
     .lean();
+
+    console.log("managerId:", req.user.id);
+
+    console.log('getPublications: Found publications:', publications.length);
+
 
     res.json({ publications });
   } catch (error) {
@@ -201,16 +207,24 @@ exports.addPublication = async (req, res) => {
       price,
       publicationType,
       publicationDays,
-      areaId // Changed from areas array to single areaId
+      areaId
     } = req.body;
+
+    if (!req.user || !req.user.id) {
+      console.log('Invalid req.user:', req.user);
+      throw new Error('Authentication required: No user ID found');
+    }
+
+    console.log('addPublication input:', { userId: req.user.id, areaId });
 
     // Verify area belongs to manager
     const area = await Area.findOne({ 
       _id: areaId,
-      managers: req.user._id
+      managers: req.user.id // Use req.user.id
     });
 
     if (!area) {
+      console.log('Area not found for:', { areaId, managerId: req.user.id });
       throw new Error('Invalid area assignment');
     }
 
@@ -221,7 +235,7 @@ exports.addPublication = async (req, res) => {
       price,
       publicationType,
       publicationDays,
-      managerId: req.user._id,
+      managerId: req.user.id, // Use req.user.id
       areas: [areaId]
     });
 
@@ -234,6 +248,7 @@ exports.addPublication = async (req, res) => {
       publication
     });
   } catch (error) {
+    console.error('addPublication error:', error.message);
     handleError(res, error);
   }
 };
@@ -246,7 +261,7 @@ exports.updatePublication = async (req, res) => {
 
     const publication = await Publication.findOne({
       _id: id,
-      managerId: req.user._id
+      managerId: req.user.id
     });
 
     if (!publication) {

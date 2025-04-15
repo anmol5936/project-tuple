@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const managerController = require('../controllers/manager.controller');
-const { authorizeRole } = require('../middleware/auth');
+const { authorizeRole,authenticateToken } = require('../middleware/auth');
 
-router.use(authorizeRole(['Manager']));
+router.use(authenticateToken,authorizeRole(['Manager']));
 
 router.get('/areas', managerController.getAreas);
 router.get('/customers', managerController.getCustomers);
