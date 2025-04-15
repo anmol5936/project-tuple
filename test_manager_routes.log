@@ -1,0 +1,442 @@
+Starting test script at Tue, Apr 15, 2025  9:12:56 PM
+[0;32mStep 1: Registering a new manager...[0m
+[0;33mTesting: POST /auth/register[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/auth/register HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 338
+> 
+} [338 bytes data]
+* upload completely sent off: 338 bytes
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 567
+< ETag: W/"237-QrZ7xxnnCxkGAk5df7iasxPudNw"
+< Date: Tue, 15 Apr 2025 15:42:59 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [567 bytes data]
+* Connection #0 to host localhost left intact
+Response: {"message":"User registered successfully","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs","user":{"id":"67fe7e83c3bdbb30ad1e2683","username":"testmanager1744731775","email":"testmanager1744731775@example.com","firstName":"Test","lastName":"Manager","role":"Manager","area":{"id":"67fe7027a0c89a7f55d9ab9d","name":"TestArea","city":"TestCity","state":"TestState"}}}
+[0;32m✓ Success: Register[0m
+[0;32mAuthentication successful! Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs[0m
+Area ID: 67fe7027a0c89a7f55d9ab9d
+67fe7027a0c89a7f55d9ab9d
+[0;32mStep 2: Testing manager routes...[0m
+[0;33mTesting: GET /manager/areas[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/areas HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Areas[0m
+Response: [0;33mTesting: GET /manager/areas[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/customers[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/customers HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Customers[0m
+Response: [0;33mTesting: GET /manager/customers[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/deliverers[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/deliverers HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Deliverers[0m
+Response: [0;33mTesting: GET /manager/deliverers[0m
+Response: 
+Continuing...
+[0;33mTesting: POST /manager/deliverers[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/manager/deliverers HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> Content-Length: 321
+> 
+} [321 bytes data]
+* upload completely sent off: 321 bytes
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Add Deliverer[0m
+Response: [0;33mTesting: POST /manager/deliverers[0m
+Response: 
+Continuing...
+[0;31m✗ Failed to extract deliverer ID[0m
+[0;33mTesting: GET /manager/publications[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/publications HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Publications[0m
+Response: [0;33mTesting: GET /manager/publications[0m
+Response: 
+Continuing...
+[0;33mTesting: POST /manager/publications[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/manager/publications HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> Content-Length: 280
+> 
+} [280 bytes data]
+* upload completely sent off: 280 bytes
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Add Publication[0m
+Response: [0;33mTesting: POST /manager/publications[0m
+Response: 
+Continuing...
+[0;31m✗ Failed to extract publication ID[0m
+[0;31mNo publication ID found to update. Skipping this test.[0m
+[0;33mTesting: GET /manager/subscription-requests[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/subscription-requests HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Subscription Requests[0m
+Response: [0;33mTesting: GET /manager/subscription-requests[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/schedules[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/schedules HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Schedules[0m
+Response: [0;33mTesting: GET /manager/schedules[0m
+Response: 
+Continuing...
+[0;31mMissing area ID or deliverer ID to create schedule. Skipping this test.[0m
+[0;33mTesting: GET /manager/bills[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/bills HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Bills[0m
+Response: [0;33mTesting: GET /manager/bills[0m
+Response: 
+Continuing...
+[0;33mTesting: POST /manager/bills/generate[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/manager/bills/generate HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> Content-Length: 33
+> 
+} [33 bytes data]
+* upload completely sent off: 33 bytes
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Generate Bills[0m
+Response: [0;33mTesting: POST /manager/bills/generate[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/payments[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/payments HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Get Payments[0m
+Response: [0;33mTesting: GET /manager/payments[0m
+Response: 
+Continuing...
+[0;33mTesting: POST /manager/payment-reminders[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/manager/payment-reminders HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> Content-Length: 2
+> 
+} [2 bytes data]
+* upload completely sent off: 2 bytes
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Send Payment Reminders[0m
+Response: [0;33mTesting: POST /manager/payment-reminders[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/reports/delivery?month=04&year=2025[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/reports/delivery?month=04&year=2025 HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Generate Delivery Report[0m
+Response: [0;33mTesting: GET /manager/reports/delivery?month=04&year=2025[0m
+Response: 
+Continuing...
+[0;33mTesting: GET /manager/reports/financial?month=04&year=2025[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> GET /api/manager/reports/financial?month=04&year=2025 HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> 
+* Request completely sent off
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Generate Financial Report[0m
+Response: [0;33mTesting: GET /manager/reports/financial?month=04&year=2025[0m
+Response: 
+Continuing...
+[0;33mTesting: POST /manager/deliverer-payments[0m
+* Host localhost:3000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:3000...
+* Connected to localhost (::1) port 3000
+* using HTTP/1.x
+> POST /api/manager/deliverer-payments HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/8.10.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZmU3ZTgzYzNiZGJiMzBhZDFlMjY4MyIsInJvbGUiOiJNYW5hZ2VyIiwidXNlcm5hbWUiOiJ0ZXN0bWFuYWdlcjE3NDQ3MzE3NzUiLCJpYXQiOjE3NDQ3MzE3NzksImV4cCI6MTc0NDgxODE3OX0.2hd7jiBPM5n6TuaaDQ_RylXSDl0rTH5Z1g4eV4kFMDs
+> Content-Length: 33
+> 
+} [33 bytes data]
+* upload completely sent off: 33 bytes
+< HTTP/1.1 400 Bad Request
+< Connection: close
+< 
+{ [0 bytes data]
+* shutting down connection #0
+Response: 
+[0;31m✗ Failed: Process Deliverer Payments[0m
+Response: [0;33mTesting: POST /manager/deliverer-payments[0m
+Response: 
+Continuing...
+[0;32mTesting completedContinuing...{NC}

@@ -1,0 +1,2 @@
+[0;34mTesting: POST /auth/register[0m
+{"message":"User already exists with this email or username"}
