@@ -21,9 +21,12 @@ const handleError = (res, error) => {
 // Get all routes assigned to the deliverer
 exports.getRoutes = async (req, res) => {
   try {
+    console.log('User ID:', req.user.id);
     const personnel = await DeliveryPersonnel.findOne({
       userId: req.user.id
     }).populate('areasAssigned');
+    
+    console.log('Personnel:', personnel);
 
     if (!personnel) {
       return res.status(404).json({ message: 'Delivery personnel record not found' });
@@ -324,5 +327,7 @@ exports.getCustomers = async (req, res) => {
     handleError(res, error);
   }
 };
+
+
 
 module.exports = exports;

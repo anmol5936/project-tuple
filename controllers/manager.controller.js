@@ -11,8 +11,11 @@ const {
   Payment,
   PaymentReminder,
   DelivererPayment,
+  DeliveryRoute,
   DeliverySummaryReport,
-  Subscription
+  Subscription,
+  RouteAddress,
+  DeliveryItem
 } = require('../models');
 
 // Helper function to handle errors
@@ -514,6 +517,115 @@ exports.handleSubscriptionRequest = async (req, res) => {
   }
 };
 
+exports.createRoute = async (req, res) => {
+  try {
+    const {
+      personnelId,
+      routeName,
+      routeDescription,
+      areaId,
+      optimizationCriteria = 'Distance',
+      addressIds = [] // Optional array of address IDs with sequence numbers
+    } = req.body;
+
+    console.log("Route",req.body);
+
+    // Validate input
+    if (!personnelId || !routeName || !areaId) {
+      return res.status(400).json({ message: 'Personnel ID, route name, and area ID are required' });
+    }
+
+    // Verify area belongs to manager
+    const area = await Area.findOne({
+      _id: areaId,
+      managers: req.user.id
+    });
+    if (!area) {
+      return res.status(403).json({ message: 'Not authorized to create route for this area' });
+    }
+
+    // Verify personnel is assigned to the area
+    const deliverer = await DeliveryPersonnel.findOne({
+      _id: personnelId,
+      areasAssigned: areaId,
+      isActive: true
+    });
+    if (!deliverer) {
+      return res.status(400).json({ message: 'Invalid or unauthorized deliverer for this area' });
+    }
+
+    // Create the delivery route
+    const route = await DeliveryRoute.create({
+      personnelId,
+      routeName,
+      routeDescription,
+      areaId,
+      optimizationCriteria,
+      isActive: true
+    });
+
+    // If addressIds are provided, create RouteAddress entries
+    if (addressIds.length > 0) {
+      // Validate provided addresses belong to active subscriptions in the area
+      const subscriptions = await Subscription.find({
+        areaId,
+        addressId: { $in: addressIds.map(addr => addr.addressId) },
+        status: 'Active'
+      });
+      const validAddressIds = subscriptions.map(sub => sub.addressId.toString());
+
+      // Create RouteAddress entries for valid addresses
+      const routeAddresses = addressIds
+        .filter(addr => validAddressIds.includes(addr.addressId))
+        .map((addr, index) => ({
+          routeId: route._id,
+          addressId: addr.addressId,
+          sequenceNumber: addr.sequenceNumber || index + 1,
+          createdAt: new Date()
+        }));
+
+      if (routeAddresses.length > 0) {
+        await RouteAddress.create(routeAddresses);
+      }
+
+      // Warn if some addresses were invalid
+      if (routeAddresses.length < addressIds.length) {
+        console.warn('Some provided addresses were not linked to active subscriptions in the area');
+      }
+    } else {
+      // Automatically include all active subscription addresses in the area
+      const subscriptions = await Subscription.find({
+        areaId,
+        status: 'Active'
+      }).populate('addressId');
+      
+      const routeAddresses = subscriptions.map((sub, index) => ({
+        routeId: route._id,
+        addressId: sub.addressId._id,
+        sequenceNumber: index + 1,
+        createdAt: new Date()
+      }));
+
+      if (routeAddresses.length > 0) {
+        await RouteAddress.create(routeAddresses);
+      }
+    }
+
+    // Populate the route with area details for response
+    const populatedRoute = await DeliveryRoute.findById(route._id)
+      .populate('areaId', 'name city state')
+      .populate('personnelId', 'userId')
+      .lean();
+
+    res.status(201).json({
+      message: 'Delivery route created successfully',
+      route: populatedRoute
+    });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 // Get delivery schedules
 exports.getSchedules = async (req, res) => {
   try {
@@ -590,20 +702,28 @@ exports.getBills = async (req, res) => {
     if (year) query.billYear = parseInt(year);
     if (status) query.status = status;
 
+    // Fetch bills without populating billItems
     const bills = await Bill.find(query)
       .populate('userId', 'firstName lastName email')
-      .populate({
-        path: 'billItems',
-        populate: {
-          path: 'publicationId',
-          select: 'name price'
-        }
-      })
       .lean();
 
-    res.json({ bills });
+    // Fetch bill items for each bill
+    const billsWithItems = await Promise.all(
+      bills.map(async (bill) => {
+        const billItems = await BillItem.find({ billId: bill._id })
+          .populate('publicationId', 'name price')
+          .lean();
+        return { ...bill, billItems };
+      })
+    );
+
+    res.json({ bills: billsWithItems });
   } catch (error) {
-    handleError(res, error);
+    console.error('Get bills error:', error);
+    res.status(500).json({
+      message: 'Error fetching bills',
+      error: error.message
+    });
   }
 };
 
@@ -625,17 +745,17 @@ exports.generateBills = async (req, res) => {
     .populate('publicationId')
     .populate('userId');
 
-    const bills = [];
-    const billItems = [];
+    const billsToCreate = [];
+    const billItemsMap = new Map(); // To track bill items by bill
 
     for (const subscription of subscriptions) {
-      let existingBill = bills.find(b => 
-        b.userId.toString() === subscription.userId._id.toString() &&
-        b.areaId.toString() === subscription.areaId.toString()
-      );
+      // Find if there's already a bill for this user and area
+      const billKey = `${subscription.userId._id}-${subscription.areaId}`;
+      let existingBill = billItemsMap.get(billKey);
 
       if (!existingBill) {
-        existingBill = {
+        // Create a new bill
+        const newBill = {
           userId: subscription.userId._id,
           billDate: new Date(),
           billMonth: month,
@@ -645,17 +765,21 @@ exports.generateBills = async (req, res) => {
           status: 'Unpaid',
           areaId: subscription.areaId,
           billNumber: `BILL-${year}${month.toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          outstandingAmount: 0
+          outstandingAmount: 0,
+          billItems: [] // Store bill items here temporarily
         };
-        bills.push(existingBill);
+        billsToCreate.push(newBill);
+        billItemsMap.set(billKey, newBill);
+        existingBill = newBill;
       }
 
+      // Calculate amount for this subscription
       const amount = subscription.publicationId.price * subscription.quantity;
       existingBill.totalAmount += amount;
       existingBill.outstandingAmount += amount;
 
-      billItems.push({
-        billId: existingBill._id,
+      // Add bill item to the temporary collection
+      existingBill.billItems.push({
         publicationId: subscription.publicationId._id,
         quantity: subscription.quantity,
         unitPrice: subscription.publicationId.price,
@@ -667,24 +791,37 @@ exports.generateBills = async (req, res) => {
       });
     }
 
-    const createdBills = await Bill.create(bills, { session });
-    const billIds = createdBills.map(bill => bill._id);
-    
-    // Update billId in billItems
-    billItems.forEach(item => {
-      const bill = createdBills.find(b => 
-        b.userId.toString() === item.userId.toString() &&
-        b.areaId.toString() === item.areaId.toString()
-      );
-      item.billId = bill._id;
+    if (billsToCreate.length === 0) {
+      return res.status(200).json({
+        message: 'No active subscriptions found for bill generation',
+        billIds: []
+      });
+    }
+
+    // Create bills first
+    const createdBills = await Bill.create(billsToCreate.map(bill => {
+      // Remove billItems from the bill object before creating
+      const { billItems, ...billData } = bill;
+      return billData;
+    }), { session });
+
+    // Create bill items with correct billId references
+    const allBillItems = [];
+    createdBills.forEach((createdBill, index) => {
+      const originalBill = billsToCreate[index];
+      const billItems = originalBill.billItems.map(item => ({
+        ...item,
+        billId: createdBill._id
+      }));
+      allBillItems.push(...billItems);
     });
 
-    await BillItem.create(billItems, { session });
+    await BillItem.create(allBillItems, { session });
 
     await session.commitTransaction();
     res.status(201).json({ 
       message: 'Bills generated successfully',
-      billIds
+      billIds: createdBills.map(bill => bill._id)
     });
   } catch (error) {
     await session.abortTransaction();
@@ -969,5 +1106,53 @@ exports.processDelivererPayments = async (req, res) => {
     session.endSession();
   }
 };
+
+// In manager.controller.js
+exports.getPersonnelIdByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    console.log('getPersonnelIdByUserId: User ID:', userId);
+
+    if (!mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ message: 'Invalid User ID format' });
+    }
+
+    // Find DeliveryPersonnel by userId
+    const personnel = await DeliveryPersonnel.findOne({ userId }).select('_id');
+
+ 
+
+    if (!personnel) {
+      return res.status(404).json({ message: 'Delivery personnel not found for this user' });
+    }
+
+    console.log('getPersonnelIdByUserId: Personnel found:', personnel._id);
+
+    res.json({ personnelId: personnel._id });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+exports.getRoutes = async (req,res) =>{
+
+  try {
+    const { areaId } = req.query;
+    const query = { isActive: true }; // Only fetch active routes
+    if (areaId) {
+      query.areaId = areaId;
+    }
+    const routes = await DeliveryRoute.find(query)
+      .populate('areaId', 'name') // Populate area name
+      .populate('personnelId', 'firstName lastName'); // Populate deliverer details
+    res.json({ routes });
+  } catch (error) {
+    console.error('Error fetching routes:', error);
+    res.status(500).json({ message: 'Failed to fetch routes' });
+  }
+
+};
+
+
 
 module.exports = exports;

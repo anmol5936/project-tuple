@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { User, SystemLog, Area,Address } = require('../models');
+const { User, SystemLog, Area,Address,DeliveryPersonnel } = require('../models');
 
 exports.register = async (req, res) => {
   try {
@@ -24,7 +24,10 @@ exports.register = async (req, res) => {
         state: addressState,
         postalCode,
         deliveryInstructions
-      } = {}
+      } = {},
+      // New delivery personnel specific fields
+      bankDetails = {},
+      commissionRate
     } = req.body;
 
     console.log('Registration data:', req.body);
@@ -33,6 +36,8 @@ exports.register = async (req, res) => {
     const existingUser = await User.findOne({
       $or: [{ email }, { username }]
     });
+
+    console.log('Existing user:', existingUser);
 
     if (existingUser) {
       return res.status(400).json({
@@ -54,6 +59,18 @@ exports.register = async (req, res) => {
       }
     }
 
+    
+    // For Deliverer role, area details are required
+    if (role === 'Deliverer') {
+
+      if (!name || !city || !state) {
+        return res.status(400).json({
+          message: 'Area details (name, city, state) are required for deliverer registration'
+        });
+      }
+    }
+
+    console.log("Area details:", name, city, state);
     // Find or create area
     let area;
     if (name && city && state) {
@@ -94,6 +111,8 @@ exports.register = async (req, res) => {
       }
     });
 
+
+
     await user.save();
 
     // Create address for customers
@@ -116,6 +135,23 @@ exports.register = async (req, res) => {
         { _id: user._id },
         { $set: { defaultAddress: address._id } }
       );
+    }
+
+    // Create DeliveryPersonnel record for Deliverer role
+    if (role === 'Deliverer') {
+      const deliveryPersonnel = await DeliveryPersonnel.create({
+        userId: user._id,
+        joiningDate: new Date(),
+        areasAssigned: area ? [area._id] : [],
+        isActive: true,
+        bankDetails: {
+          accountName: bankDetails.accountName || '',
+          accountNumber: bankDetails.accountNumber || '',
+          bankName: bankDetails.bankName || '',
+          ifscCode: bankDetails.ifscCode || ''
+        },
+        commissionRate: commissionRate || 2.5,
+      });
     }
 
     // If user is a manager, deliverer, or customer, update area with their reference

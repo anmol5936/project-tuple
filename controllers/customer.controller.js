@@ -78,8 +78,6 @@ exports.getSubscriptions = async (req, res) => {
     .populate('addressId')
     .populate('delivererId', '-password');
 
-    console.log('Subscriptions found:', subscriptions);
-
     res.json({ subscriptions });
   } catch (error) {
     console.error('Get subscriptions error:', error);
@@ -244,11 +242,14 @@ exports.cancelSubscription = async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log('Cancelling subscription with ID:', id);
+
     const subscription = await Subscription.findOne({
       _id: id,
       userId: req.user.id,
       status: 'Active'
     });
+
 
     if (!subscription) {
       return res.status(404).json({ message: 'Active subscription not found' });
@@ -263,6 +264,10 @@ exports.cancelSubscription = async (req, res) => {
       status: 'Pending'
     });
 
+    console.log('cancellationRequest:', cancellationRequest);
+
+  
+
     await cancellationRequest.save();
 
     // Log customer activity
@@ -271,6 +276,8 @@ exports.cancelSubscription = async (req, res) => {
       activityType: 'Cancellation',
       details: `Requested cancellation for subscription ${id}`
     });
+
+    console.log('activity:', activity);
 
     await activity.save();
 
