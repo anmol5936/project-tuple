@@ -244,15 +244,19 @@ exports.cancelSubscription = async (req, res) => {
 
     console.log('Cancelling subscription with ID:', id);
 
+    // First check if subscription exists regardless of status
     const subscription = await Subscription.findOne({
       _id: id,
-      userId: req.user.id,
-      status: 'Active'
+      userId: req.user.id
     });
 
-
     if (!subscription) {
-      return res.status(404).json({ message: 'Active subscription not found' });
+      return res.status(404).json({ message: 'Subscription not found' });
+    }
+
+    // If already cancelled, return an appropriate message
+    if (subscription.status.toLowerCase() === 'cancelled') {
+      return res.status(400).json({ message: 'Subscription is already cancelled' });
     }
 
     // Create cancellation request
@@ -265,8 +269,6 @@ exports.cancelSubscription = async (req, res) => {
     });
 
     console.log('cancellationRequest:', cancellationRequest);
-
-  
 
     await cancellationRequest.save();
 
@@ -283,7 +285,11 @@ exports.cancelSubscription = async (req, res) => {
 
     res.json({ 
       message: 'Cancellation request created successfully',
-      cancellationRequest 
+      cancellationRequest: {
+        id: cancellationRequest._id,
+        status: cancellationRequest.status,
+        effectiveDate: cancellationRequest.effectiveDate
+      }
     });
   } catch (error) {
     console.error('Cancel subscription error:', error);
@@ -353,6 +359,8 @@ exports.getBills = async (req, res) => {
     })
     .sort({ billDate: -1 })
     .populate('areaId');
+
+    console.log('User ID:', req.user.id);
 
     res.json({ bills });
   } catch (error) {
