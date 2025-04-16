@@ -656,34 +656,122 @@ exports.getSchedules = async (req, res) => {
 
 // Create delivery schedule
 exports.createSchedule = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { personnelId, date, areaId, routeId, notes } = req.body;
+
+    // Validate input
+    if (!personnelId || !date || !areaId || !routeId) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'Personnel ID, date, area ID, and route ID are required' });
+    }
 
     // Verify area belongs to manager
     const area = await Area.findOne({
       _id: areaId,
-      managers: req.user.id
-    });
+      managers: req.user.id,
+    }).session(session);
 
     if (!area) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({ message: 'Not authorized to create schedule for this area' });
     }
 
-    const schedule = await DeliverySchedule.create({
-      personnelId,
-      date,
-      areaId,
-      routeId,
-      notes,
-      status: 'Pending'
-    });
+    // Verify personnel and route
+    const deliverer = await DeliveryPersonnel.findOne({
+      _id: personnelId,
+      areasAssigned: areaId,
+      isActive: true,
+    }).session(session);
 
-    res.status(201).json({ 
-      message: 'Schedule created successfully',
-      schedule
+    if (!deliverer) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'Invalid or unauthorized deliverer for this area' });
+    }
+
+    const route = await DeliveryRoute.findOne({
+      _id: routeId,
+      areaId,
+      personnelId,
+      isActive: true,
+    }).session(session);
+
+    if (!route) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'Invalid or unauthorized route for this area and deliverer' });
+    }
+
+    // Create schedule
+    const schedule = await DeliverySchedule.create(
+      [
+        {
+          personnelId,
+          date: new Date(date),
+          areaId,
+          routeId,
+          notes,
+          status: 'Pending',
+        },
+      ],
+      { session }
+    );
+
+    // Find active subscriptions in the area
+    const subscriptions = await Subscription.find({
+      areaId,
+      status: 'Active',
+    })
+      .populate('publicationId')
+      .populate('addressId')
+      .session(session);
+
+    // Create DeliveryItem for each subscription
+    const deliveryItems = subscriptions.map((sub) => ({
+      scheduleId: schedule[0]._id,
+      subscriptionId: sub._id,
+      addressId: sub.addressId._id,
+      publicationId: sub.publicationId._id,
+      quantity: sub.quantity || 1, // Use subscription quantity
+      status: 'Pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    if (deliveryItems.length > 0) {
+      await DeliveryItem.create(deliveryItems, { session });
+      console.log(`Created ${deliveryItems.length} DeliveryItem records for schedule ${schedule[0]._id}`);
+    } else {
+      console.log('No active subscriptions found for area:', areaId);
+    }
+
+    await session.commitTransaction();
+
+    // Populate schedule for response
+    const populatedSchedule = await DeliverySchedule.findById(schedule[0]._id)
+      .populate('personnelId', 'userId')
+      .populate('routeId', 'routeName routeDescription')
+      .populate('areaId', 'name city state')
+      .lean();
+
+    res.status(201).json({
+      message: 'Schedule created successfully with delivery items',
+      schedule: populatedSchedule,
     });
   } catch (error) {
-    handleError(res, error);
+    await session.abortTransaction();
+    console.error('Create schedule error:', error);
+    res.status(500).json({
+      message: 'Error creating schedule',
+      error: error.message,
+    });
+  } finally {
+    session.endSession();
   }
 };
 

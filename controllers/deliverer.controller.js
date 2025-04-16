@@ -76,27 +76,34 @@ exports.getSchedule = async (req, res) => {
 // Get delivery items for today
 exports.getDeliveryItems = async (req, res) => {
   try {
+    console.log('User ID:', req.user.id);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const schedule = await DeliverySchedule.findOne({
+    const schedules = await DeliverySchedule.find({
       personnelId: req.user.deliveryPersonnel,
       date: {
         $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      }
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+      },
     });
 
-    if (!schedule) {
-      return res.status(404).json({ message: 'No schedule found for today' });
+    console.log('Schedules:', schedules);
+
+    if (!schedules || schedules.length === 0) {
+      return res.status(404).json({ message: 'No schedules found for today' });
     }
 
-    const items = await DeliveryItem.find({ scheduleId: schedule._id })
+    const scheduleIds = schedules.map((schedule) => schedule._id);
+
+    const items = await DeliveryItem.find({ scheduleId: { $in: scheduleIds } })
       .populate('subscriptionId', 'userId quantity deliveryPreferences')
       .populate('addressId', 'streetAddress city state postalCode deliveryInstructions')
       .populate('publicationId', 'name language')
       .sort({ 'addressId.postalCode': 1 })
       .lean();
+
+      console.log('Items:', items);
 
     res.json({ items });
   } catch (error) {
