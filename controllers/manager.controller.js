@@ -86,7 +86,7 @@ exports.getCustomers = async (req, res) => {
 // Get all deliverers in manager's areas
 exports.getDeliverers = async (req, res) => {
   try {
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const deliverers = await DeliveryPersonnel.find({
@@ -107,7 +107,7 @@ exports.getDeliverers = async (req, res) => {
 exports.addDeliverer = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, areaId, bankDetails, commissionRate } = req.body;
-    console.log('addDeliverer: Input:', { areaId, email, userId: req.user._id });
+    console.log('addDeliverer: Input:', { areaId, email, userId: req.user.id });
 
     // Validate input
     if (!areaId || !email) {
@@ -115,7 +115,7 @@ exports.addDeliverer = async (req, res) => {
     }
 
     // Check area access
-    const area = await Area.findOne({ _id: areaId, managers: req.user._id });
+    const area = await Area.findOne({ _id: areaId, managers: req.user.id });
     console.log('addDeliverer: Area found:', area);
     if (!area) {
       return res.status(403).json({ message: 'Invalid area assignment or unauthorized' });
@@ -272,7 +272,7 @@ exports.updatePublication = async (req, res) => {
     if (updateData.areas) {
       const managerAreas = await Area.find({ 
         _id: { $in: updateData.areas },
-        managers: req.user._id
+        managers: req.user.id
       });
 
       if (managerAreas.length !== updateData.areas.length) {
@@ -296,31 +296,59 @@ exports.updatePublication = async (req, res) => {
 // Get subscription change requests
 exports.getSubscriptionRequests = async (req, res) => {
   try {
-    const areas = await Area.find({ managers: req.user._id });
+    // Find areas managed by the user
+    const areas = await Area.find({ managers: req.user.id });
+    console.log('getSubscriptionRequests: Areas:', areas);
     const areaIds = areas.map(area => area._id);
+    const publicationIds = areas.flatMap(area => area.publications);
 
+    // Find pending subscription change requests
     const requests = await SubscriptionChangeRequest.find({
-      status: 'Pending'
+      status: 'Pending',
     })
-    .populate({
-      path: 'subscriptionId',
-      match: { areaId: { $in: areaIds } }
-    })
-    .populate('userId', 'firstName lastName email')
-    .populate('publicationId')
-    .populate('newAddressId')
-    .lean();
+      .populate({
+        path: 'subscriptionId',
+        match: { areaId: { $in: areaIds } },
+        select: 'areaId publicationId',
+      })
+      .populate('userId', 'firstName lastName email')
+      .populate('publicationId', 'name language price')
+      .populate('newAddressId', 'name city state areaId')
+      .lean();
 
-    // Filter out requests for subscriptions not in manager's areas
-    const validRequests = requests.filter(req => req.subscriptionId);
+    console.log('getSubscriptionRequests: Found requests:', requests.length);
+    console.log('getSubscriptionRequests: Raw requests:', JSON.stringify(requests, null, 2));
 
+    // Filter valid requests
+    const validRequests = requests.filter(req => {
+      if (req.requestType === 'New') {
+        // For new subscriptions, check publicationId or newAddressId
+        const isPublicationInArea = req.publicationId && publicationIds.some(pubId => pubId.equals(req.publicationId._id));
+        const isAddressInArea = req.newAddressId && req.newAddressId.areaId && areaIds.some(areaId => areaId.equals(req.newAddressId.areaId));
+        return isPublicationInArea || isAddressInArea || (req.subscriptionId && areaIds.some(areaId => areaId.equals(req.subscriptionId.areaId)));
+      }
+      // For other request types, require a populated subscriptionId
+      return req.subscriptionId;
+    });
+
+    console.log('getSubscriptionRequests: Valid requests:', validRequests.length);
+
+    // Log invalid requests for debugging
+    const invalidRequests = requests.filter(req => !validRequests.includes(req));
+    if (invalidRequests.length > 0) {
+      console.log('getSubscriptionRequests: Invalid requests:', JSON.stringify(invalidRequests, null, 2));
+    }
+    console.log('getSubscriptionRequests: Valid requests:', JSON.stringify(validRequests, null, 2));
     res.json({ requests: validRequests });
   } catch (error) {
-    handleError(res, error);
+    console.error('getSubscriptionRequests: Error:', error);
+    res.status(500).json({
+      message: 'Error fetching subscription requests',
+      error: error.message,
+    });
   }
 };
 
-// Handle subscription request
 exports.handleSubscriptionRequest = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -329,72 +357,158 @@ exports.handleSubscriptionRequest = async (req, res) => {
     const { id } = req.params;
     const { status, comments } = req.body;
 
+    console.log('handleSubscriptionRequest: ID:', id);
+    console.log('handleSubscriptionRequest: Payload:', req.body);
+
     const request = await SubscriptionChangeRequest.findById(id)
       .populate('subscriptionId')
-      .populate('publicationId');
+      .populate('publicationId')
+      .populate('newAddressId');
+
+    console.log('handleSubscriptionRequest: Request:', request);
 
     if (!request) {
+      await session.abortTransaction();
+      session.endSession();
+      console.log('handleSubscriptionRequest: Request not found for ID:', id);
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    // Verify the subscription is in manager's area
-    const area = await Area.findOne({
-      _id: request.subscriptionId.areaId,
-      managers: req.user._id
-    });
+    console.log('checkpoint 1');
+
+    // Verify the request is in manager's area
+    let area;
+    if (request.requestType === 'New') {
+      area = await Area.findOne({
+        $or: [
+          { publications: request.publicationId._id },
+          { _id: request.newAddressId?.areaId },
+          { _id: request.subscriptionId?.areaId },
+        ],
+        managers: req.user.id,
+      });
+    } else {
+      area = await Area.findOne({
+        _id: request.subscriptionId?.areaId,
+        managers: req.user.id,
+      });
+    }
+
+    console.log('handleSubscriptionRequest: Area:', area);
 
     if (!area) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({ message: 'Not authorized to handle this request' });
     }
 
     request.status = status;
-    request.processedBy = req.user._id;
+    request.processedBy = req.user.id;
     request.processedDate = new Date();
     request.comments = comments;
+    console.log('handleSubscriptionRequest: Updated request:', request);
 
     if (status === 'Approved') {
       switch (request.requestType) {
-        case 'New':
-          await Subscription.create([{
-            userId: request.userId,
-            publicationId: request.publicationId._id,
-            quantity: request.newQuantity || 1,
-            startDate: request.effectiveDate,
-            addressId: request.newAddressId,
-            areaId: area._id
-          }], { session });
-          break;
+        case 'New': {
+          let subscription;
+          let addressId = request.newAddressId?._id;
 
-        case 'Modify':
-          const subscription = await Subscription.findById(request.subscriptionId);
-          if (request.newQuantity) subscription.quantity = request.newQuantity;
-          if (request.newAddressId) subscription.addressId = request.newAddressId;
+          if (!addressId) {
+            // Fetch a default address for the user
+            const defaultAddress = await Address.findOne({
+              userId: request.userId,
+              areaId: area._id,
+              isActive: true,
+            }).session(session);
+            if (!defaultAddress) {
+              await session.abortTransaction();
+              session.endSession();
+              return res.status(400).json({ message: 'No valid address found for user in this area' });
+            }
+            addressId = defaultAddress._id;
+            request.newAddressId = defaultAddress;
+            console.log('handleSubscriptionRequest: Using default address:', defaultAddress);
+          }
+
+          if (request.subscriptionId) {
+            subscription = await Subscription.findById(request.subscriptionId).session(session);
+            console.log('handleSubscriptionRequest: Existing Subscription:', subscription);
+            if (!subscription) {
+              await session.abortTransaction();
+              session.endSession();
+              return res.status(404).json({ message: 'Subscription not found' });
+            }
+          } else {
+            subscription = new Subscription({
+              userId: request.userId,
+              publicationId: request.publicationId._id,
+              quantity: request.newQuantity || 1,
+              addressId,
+              areaId: request.newAddressId?.areaId || area._id,
+              deliveryPreferences: request.deliveryPreferences || {
+                placement: 'Mailbox',
+                additionalInstructions: request.newAddressId?.deliveryInstructions,
+              },
+              status: 'Pending',
+            });
+            await subscription.save({ session });
+            request.subscriptionId = subscription._id;
+            console.log('handleSubscriptionRequest: Created Subscription:', subscription);
+          }
+          subscription.status = 'Active';
+          subscription.startDate = request.effectiveDate;
           await subscription.save({ session });
           break;
+        }
 
-        case 'Cancel':
+        case 'Update': {
+          const modifySubscription = await Subscription.findById(request.subscriptionId).session(session);
+          if (!modifySubscription) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Subscription not found' });
+          }
+          if (request.newQuantity) modifySubscription.quantity = request.newQuantity;
+          if (request.newAddressId) modifySubscription.addressId = request.newAddressId._id;
+          if (request.deliveryPreferences) {
+            modifySubscription.deliveryPreferences = {
+              placement: request.deliveryPreferences.placement,
+              additionalInstructions: request.deliveryPreferences.additionalInstructions || request.newAddressId?.deliveryInstructions,
+            };
+          }
+          await modifySubscription.save({ session });
+          break;
+        }
+
+        case 'Cancel': {
           await Subscription.findByIdAndUpdate(
             request.subscriptionId,
             {
               status: 'Cancelled',
-              endDate: request.effectiveDate
+              endDate: request.effectiveDate,
             },
             { session }
           );
           break;
+        }
       }
     }
 
     await request.save({ session });
     await session.commitTransaction();
 
-    res.json({ 
+    res.json({
       message: 'Subscription request handled successfully',
-      request
+      request,
     });
   } catch (error) {
     await session.abortTransaction();
-    handleError(res, error);
+    console.error('Handle subscription request error:', error);
+    res.status(500).json({
+      message: 'Error handling subscription request',
+      error: error.message,
+    });
   } finally {
     session.endSession();
   }
@@ -407,7 +521,7 @@ exports.getSchedules = async (req, res) => {
     const queryDate = date ? new Date(date) : new Date();
     queryDate.setHours(0, 0, 0, 0);
 
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const schedules = await DeliverySchedule.find({
@@ -436,7 +550,7 @@ exports.createSchedule = async (req, res) => {
     // Verify area belongs to manager
     const area = await Area.findOne({
       _id: areaId,
-      managers: req.user._id
+      managers: req.user.id
     });
 
     if (!area) {
@@ -465,7 +579,7 @@ exports.createSchedule = async (req, res) => {
 exports.getBills = async (req, res) => {
   try {
     const { month, year, status } = req.query;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const query = {
@@ -500,7 +614,7 @@ exports.generateBills = async (req, res) => {
 
   try {
     const { month, year } = req.body;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     // Get all active subscriptions in manager's areas
@@ -584,7 +698,7 @@ exports.generateBills = async (req, res) => {
 exports.getPayments = async (req, res) => {
   try {
     const { startDate, endDate, status } = req.query;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const query = {
@@ -609,7 +723,7 @@ exports.getPayments = async (req, res) => {
 // Send payment reminders
 exports.sendPaymentReminders = async (req, res) => {
   try {
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     // Find overdue bills
@@ -657,7 +771,7 @@ exports.sendPaymentReminders = async (req, res) => {
 exports.generateDeliveryReport = async (req, res) => {
   try {
     const { month, year } = req.query;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const report = await DeliverySummaryReport.findOne({
@@ -705,7 +819,7 @@ exports.generateDeliveryReport = async (req, res) => {
         reportMonth: parseInt(month),
         reportYear: parseInt(year),
         generatedDate: new Date(),
-        generatedBy: req.user._id,
+        generatedBy: req.user.id,
         reportData
       });
 
@@ -722,7 +836,7 @@ exports.generateDeliveryReport = async (req, res) => {
 exports.generateFinancialReport = async (req, res) => {
   try {
     const { month, year } = req.query;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     const startDate = new Date(year, month - 1, 1);
@@ -793,7 +907,7 @@ exports.processDelivererPayments = async (req, res) => {
 
   try {
     const { month, year } = req.body;
-    const areas = await Area.find({ managers: req.user._id });
+    const areas = await Area.find({ managers: req.user.id });
     const areaIds = areas.map(area => area._id);
 
     // Get all deliverers in manager's areas

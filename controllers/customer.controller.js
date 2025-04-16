@@ -11,6 +11,7 @@ const {
   DeliveryItem,
   CustomerActivity
 } = require('../models');
+const {mongoose} = require('mongoose');
 
 // Get managers in customer's area
 exports.getManagers = async (req, res) => {
@@ -68,6 +69,7 @@ exports.getPublications = async (req, res) => {
 // Get customer's active subscriptions
 exports.getSubscriptions = async (req, res) => {
   try {
+    console.log('Fetching subscriptions for user:', req.user.id);
     const subscriptions = await Subscription.find({
       userId: req.user.id,
       status: { $in: ['Active', 'Paused'] }
@@ -75,6 +77,8 @@ exports.getSubscriptions = async (req, res) => {
     .populate('publicationId')
     .populate('addressId')
     .populate('delivererId', '-password');
+
+    console.log('Subscriptions found:', subscriptions);
 
     res.json({ subscriptions });
   } catch (error) {
@@ -89,49 +93,97 @@ exports.getSubscriptions = async (req, res) => {
 // Create new subscription request
 exports.createSubscription = async (req, res) => {
   try {
-    const { publicationId, quantity, addressId, deliveryPreferences } = req.body;
+    const { publicationId, quantity, deliveryPreferences, addressId } = req.body;
 
-    // Validate publication exists and is active
-    const publication = await Publication.findOne({
-      _id: publicationId,
-      isActive: true
-    });
 
+    console.log('Creating subscription with data:', req.body);
+
+    // Validate inputs
+    if (!mongoose.Types.ObjectId.isValid(publicationId)) {
+      return res.status(400).json({ message: 'Invalid publication ID format' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(addressId)) {
+      return res.status(400).json({ message: 'Invalid address ID format' });
+    }
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      return res.status(400).json({ message: 'Quantity must be a positive integer' });
+    }
+    if (!deliveryPreferences || !deliveryPreferences.placement) {
+      return res.status(400).json({ message: 'Delivery placement is required' });
+    }
+
+
+    // Validate publication
+    const publication = await Publication.findOne({ _id: publicationId, isActive: true });
+    console.log('Publication found:', publication);
     if (!publication) {
       return res.status(404).json({ message: 'Publication not found or inactive' });
     }
+
+    // Validate address
+    const address = await Address.findOne({
+      _id: addressId,
+      userId: req.user.id,
+      isActive: true,
+    });
+    console.log('Address found:', address);
+    if (!address) {
+      return res.status(404).json({ message: 'Address not found or inactive' });
+    }
+
+    // Create subscription
+    const subscription = new Subscription({
+      userId: req.user.id,
+      publicationId,
+      quantity,
+      addressId: address._id,
+      areaId: address.areaId,
+      deliveryPreferences: {
+        placement: deliveryPreferences.placement,
+        additionalInstructions: deliveryPreferences.additionalInstructions || address.deliveryInstructions,
+      },
+      startDate: new Date(), // Required field
+      status: 'Active', // Valid enum value
+    });
+    await subscription.save();
 
     // Create subscription change request
     const subscriptionRequest = new SubscriptionChangeRequest({
       userId: req.user.id,
       requestType: 'New',
+      subscriptionId: subscription._id,
       publicationId,
       newQuantity: quantity,
-      newAddressId: addressId,
-      effectiveDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      status: 'Pending'
+      newAddressId: address._id,
+      deliveryPreferences: {
+        placement: deliveryPreferences.placement,
+        additionalInstructions: deliveryPreferences.additionalInstructions || address.deliveryInstructions,
+      },
+      effectiveDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: 'Pending',
+      requestDate: new Date(),
     });
 
+    console.log('subscriptionRequest:', subscriptionRequest);
     await subscriptionRequest.save();
 
-    // Log customer activity
+    // Log activity
     const activity = new CustomerActivity({
       userId: req.user.id,
       activityType: 'New Subscription',
-      details: `Requested new subscription for ${publication.name}`
+      details: `Requested new subscription for ${publication.name}`,
     });
-
     await activity.save();
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Subscription request created successfully',
-      subscriptionRequest 
+      subscriptionRequest,
     });
   } catch (error) {
     console.error('Create subscription error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error creating subscription request',
-      error: error.message 
+      error: error.message,
     });
   }
 };

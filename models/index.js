@@ -39,6 +39,7 @@ const AreaSchema = new Schema({
   });
 
 // Address Schema
+
 const AddressSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   streetAddress: { type: String, required: true },
@@ -99,27 +100,53 @@ const SubscriptionSchema = new Schema({
 });
 
 // Subscription Change Request Schema
-const SubscriptionChangeRequestSchema = new Schema({
-  subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+const subscriptionChangeRequestSchema = new Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   requestType: {
     type: String,
+    enum: ['New', 'Update', 'Cancel'],
     required: true,
-    enum: ['New', 'Modify', 'Cancel']
   },
-  publicationId: { type: Schema.Types.ObjectId, ref: 'Publication' },
-  newQuantity: { type: Number },
-  newAddressId: { type: Schema.Types.ObjectId, ref: 'Address' },
-  requestDate: { type: Date, default: Date.now },
-  effectiveDate: { type: Date, required: true },
+  subscriptionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Subscription',
+  },
+  publicationId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Publication',
+  },
+  newQuantity: Number,
+  newAddressId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Address',
+  },
+  deliveryPreferences: {
+    placement: String,
+    additionalInstructions: String,
+  },
   status: {
     type: String,
+    enum: ['Pending', 'Approved', 'Rejected'],
     default: 'Pending',
-    enum: ['Pending', 'Approved', 'Rejected', 'Completed']
   },
-  processedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-  processedDate: { type: Date },
-  comments: { type: String }
+  requestDate: {
+    type: Date,
+    default: Date.now,
+  },
+  effectiveDate: {
+    type: Date,
+    required: true,
+  },
+  comments: String,
+  processedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  processedDate: Date,
 });
 
 // Subscription Pause Schema
@@ -371,7 +398,7 @@ const Area = mongoose.model('Area', AreaSchema);
 const Address = mongoose.model('Address', AddressSchema);
 const Publication = mongoose.model('Publication', PublicationSchema);
 const Subscription = mongoose.model('Subscription', SubscriptionSchema);
-const SubscriptionChangeRequest = mongoose.model('SubscriptionChangeRequest', SubscriptionChangeRequestSchema);
+const SubscriptionChangeRequest = mongoose.model('SubscriptionChangeRequest', subscriptionChangeRequestSchema);
 const SubscriptionPause = mongoose.model('SubscriptionPause', SubscriptionPauseSchema);
 const DeliveryPersonnel = mongoose.model('DeliveryPersonnel', DeliveryPersonnelSchema);
 const DeliveryRoute = mongoose.model('DeliveryRoute', DeliveryRouteSchema);
@@ -395,7 +422,7 @@ module.exports = {
   Address,
   Publication,
   Subscription,
-  SubscriptionChangeRequest,
+SubscriptionChangeRequest,
   SubscriptionPause,
   DeliveryPersonnel,
   DeliveryRoute,

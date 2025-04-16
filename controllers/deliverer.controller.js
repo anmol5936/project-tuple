@@ -22,7 +22,7 @@ const handleError = (res, error) => {
 exports.getRoutes = async (req, res) => {
   try {
     const personnel = await DeliveryPersonnel.findOne({
-      userId: req.user._id
+      userId: req.user.id
     }).populate('areasAssigned');
 
     if (!personnel) {
@@ -182,7 +182,7 @@ exports.getEarnings = async (req, res) => {
     const queryYear = parseInt(year) || currentDate.getFullYear();
 
     const personnel = await DeliveryPersonnel.findOne({
-      userId: req.user._id
+      userId: req.user.id
     });
 
     if (!personnel) {
@@ -225,7 +225,7 @@ exports.getPaymentHistory = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const personnel = await DeliveryPersonnel.findOne({
-      userId: req.user._id
+      userId: req.user.id
     });
 
     if (!personnel) {
@@ -262,7 +262,7 @@ exports.getPaymentHistory = async (req, res) => {
 exports.getCustomers = async (req, res) => {
   try {
     const personnel = await DeliveryPersonnel.findOne({
-      userId: req.user._id
+      userId: req.user.id
     });
 
     if (!personnel) {
@@ -272,7 +272,7 @@ exports.getCustomers = async (req, res) => {
     // Get customers from assigned areas
     const areas = await Area.find({
       _id: { $in: personnel.areasAssigned },
-      deliverers: req.user._id
+      deliverers: req.user.id
     }).populate({
       path: 'publications',
       select: 'name language publicationType price'

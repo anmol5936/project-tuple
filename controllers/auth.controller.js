@@ -1,41 +1,57 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { User, SystemLog, Area } = require('../models');
+const { User, SystemLog, Area,Address } = require('../models');
 
 exports.register = async (req, res) => {
   try {
-    const { 
-      username, 
-      password, 
-      email, 
-      firstName, 
-      lastName, 
-      role, 
+    const {
+      username,
+      password,
+      email,
+      firstName,
+      lastName,
+      role,
       phone,
       area: {
         name,
         city,
         state,
         postalCodes = []
+      } = {},
+      address: {
+        streetAddress,
+        city: addressCity,
+        state: addressState,
+        postalCode,
+        deliveryInstructions
       } = {}
     } = req.body;
 
+    console.log('Registration data:', req.body);
+
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
     });
 
     if (existingUser) {
-      return res.status(400).json({ 
-        message: 'User already exists with this email or username' 
+      return res.status(400).json({
+        message: 'User already exists with this email or username'
       });
     }
 
-    // For Customer role, area details are required
-    if (role === 'Customer' && (!name || !city || !state)) {
-      return res.status(400).json({
-        message: 'Area details are required for customer registration'
-      });
+    // For Customer role, area and address details are required
+    if (role === 'Customer') {
+      if (!name || !city || !state) {
+        return res.status(400).json({
+          message: 'Area details (name, city, state) are required for customer registration'
+        });
+      }
+      if (!streetAddress || !addressCity || !addressState || !postalCode) {
+        return res.status(400).json({
+          message: 'Address details (street address, city, state, postal code) are required for customer registration'
+        });
+      }
     }
 
     // Find or create area
@@ -62,7 +78,7 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // Create new user without defaultAddress
     const user = new User({
       username,
       password: hashedPassword,
@@ -78,7 +94,31 @@ exports.register = async (req, res) => {
       }
     });
 
-    // If user is a manager or deliverer, update area with their reference
+    await user.save();
+
+    // Create address for customers
+    let address;
+    if (role === 'Customer' && streetAddress && addressCity && addressState && postalCode) {
+      address = await Address.create({
+        userId: user._id,
+        streetAddress,
+        city: addressCity,
+        state: addressState,
+        postalCode,
+        areaId: area?._id,
+        deliveryInstructions,
+        isActive: true,
+        isDefault: true
+      });
+
+      // Update user with defaultAddress
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { defaultAddress: address._id } }
+      );
+    }
+
+    // If user is a manager, deliverer, or customer, update area with their reference
     if (area) {
       if (role === 'Manager') {
         area.managers.push(user._id);
@@ -90,14 +130,12 @@ exports.register = async (req, res) => {
       await area.save();
     }
 
-    await user.save();
-
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: user._id, 
+      {
+        id: user._id,
         role: user.role,
-        username: user.username 
+        username: user.username
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -126,14 +164,20 @@ exports.register = async (req, res) => {
           name: area.name,
           city: area.city,
           state: area.state
+        } : null,
+        address: address ? {
+          id: address._id,
+          streetAddress: address.streetAddress,
+          city: address.city,
+          state: address.postalCode
         } : null
       }
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error registering user',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -141,9 +185,10 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Find user by username
+    // Find user by username and populate areas
     const user = await User.findOne({ username })
-      .populate('areas', 'name city state');
+      .populate('areas', 'name city state')
+      .populate('defaultAddress', 'streetAddress city state postalCode areaId');
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -179,18 +224,31 @@ exports.login = async (req, res) => {
       ipAddress: req.ip
     });
 
+    // Construct user response with defaultAddress
+    const userResponse = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      areas: user.areas, // Existing populated areas
+      defaultAddress: user.defaultAddress
+        ? {
+            id: user.defaultAddress._id,
+            streetAddress: user.defaultAddress.streetAddress,
+            city: user.defaultAddress.city,
+            state: user.defaultAddress.state,
+            postalCode: user.defaultAddress.postalCode,
+            areaId: user.defaultAddress.areaId,
+          }
+        : undefined,
+    };
+
     res.json({
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        areas: user.areas
-      }
+      user: userResponse,
     });
   } catch (error) {
     console.error('Login error:', error);
