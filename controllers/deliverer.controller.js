@@ -195,11 +195,13 @@ exports.getEarnings = async (req, res) => {
       userId: req.user.id
     });
 
+    console.log('Personnel:', personnel);
+
     if (!personnel) {
       return res.status(404).json({ message: 'Delivery personnel record not found' });
     }
 
-    const earnings = await DelivererPayment.findOne({
+    const earnings = await DelivererPayment.find({
       personnelId: personnel._id,
       paymentMonth: queryMonth,
       paymentYear: queryYear
@@ -210,15 +212,17 @@ exports.getEarnings = async (req, res) => {
     })
     .lean();
 
-    if (!earnings) {
+    console.log('Earnings:', earnings);
+
+    if (!earnings || earnings.length === 0) {
       return res.json({
-        earnings: {
+        earnings: [{
           month: queryMonth,
           year: queryYear,
           amount: 0,
           status: 'Pending',
           commissionRate: personnel.commissionRate
-        }
+        }]
       });
     }
 
@@ -249,6 +253,8 @@ exports.getPaymentHistory = async (req, res) => {
     .skip(skip)
     .limit(parseInt(limit))
     .lean();
+
+    console.log('Payments:', payments);
 
     const total = await DelivererPayment.countDocuments({
       personnelId: personnel._id

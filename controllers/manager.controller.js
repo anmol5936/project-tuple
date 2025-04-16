@@ -1179,6 +1179,8 @@ exports.processDelivererPayments = async (req, res) => {
       }
     }
 
+    console.log('Payments to be processed:', payments);
+
     if (payments.length > 0) {
       await DelivererPayment.create(payments, { session });
     }
